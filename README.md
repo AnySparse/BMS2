@@ -80,6 +80,7 @@ Use `generate.sh` to initialize and process the dataset:
 
 ```bash
 ./generate.sh
+```
 
 ## 3\. Running Experiments
 
