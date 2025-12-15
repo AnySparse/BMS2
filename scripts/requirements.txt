@@ -1,0 +1,8 @@
+matplotlib
+networkx
+pandas
+pysmiles
+rdkit
+seaborn
+tqdm
+gdown
