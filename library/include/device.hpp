@@ -35,15 +35,11 @@ class GenerateDataSignaturesKernel;
 class RefineDataSignaturesKernel;
 
 class GenerateCSRPathSignaturesKernel;
-// ========== 新增代码 [开始] ==========
 class GenerateCSRCycleSignaturesKernel;
-// ========== 新增代码 [结束] ==========
 template<CandidatesDomain D>
 class RefineCandidatesByPathKernel;
-// ========== 新增代码 [开始] ==========
 template<CandidatesDomain D>
 class RefineCandidatesByCycleKernel;
-// ========== 新增代码 [结束] ==========
 
 template<CandidatesDomain D>
 class FilterCandidatesKernel;

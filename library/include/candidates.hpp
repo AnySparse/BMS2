@@ -14,7 +14,7 @@ namespace candidates {
 class Candidates {
 public:
   struct CandidatesDevice {
-    types::candidates_t* candidates = nullptr; // <--- 这里是修改
+    types::candidates_t* candidates = nullptr; 
     constexpr static types::candidates_t num_bits = sizeof(types::candidates_t) * 8;
     size_t source_nodes;
     size_t target_nodes;

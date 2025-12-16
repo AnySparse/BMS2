@@ -7,7 +7,7 @@
 #include <numeric>
 #include <sigmo.hpp>
 #include <sycl/sycl.hpp>
-#include <chrono> // 确保引入 chrono
+#include <chrono> 
 
 int main(int argc, char** argv) {
   Args args{argc, argv, sigmo::device::deviceOptions};
@@ -22,14 +22,13 @@ int main(int argc, char** argv) {
 
   TimeEvents host_time_events;
 
-  // [新增] 用于存储第一个查询图的节点数，供 --use-cs 参数使用
   size_t first_query_nodes = 0;
 
   if (args.query_data) {
     auto query_graphs = sigmo::io::loadCSRGraphsFromFile(args.query_file);
     auto data_graphs = sigmo::io::loadCSRGraphsFromFile(args.data_file);
     
-    // 处理查询图过滤
+
     if (args.query_filter.active) {
       for (int i = 0; i < (int)query_graphs.size(); ++i) {
         if (query_graphs[i].getNumNodes() > args.query_filter.max_nodes || query_graphs[i].getNumNodes() < args.query_filter.min_nodes) {
@@ -38,8 +37,7 @@ int main(int argc, char** argv) {
         }
       }
     }
-    
-    // [新增] 捕获过滤后第一个查询图的节点数
+
     if (!query_graphs.empty()) {
         first_query_nodes = query_graphs[0].getNumNodes();
     }
@@ -95,7 +93,7 @@ int main(int argc, char** argv) {
   size_t candidates_bytes = candidates.getAllocationSize();
   std::cout << "Allocated " << getBytesSize(candidates_bytes) << " for candidates" << std::endl;
 
-  // ===== 三类签名（label/path/cycle） =====
+
   sigmo::signature::Signature<> signatures{queue, device_data_graph.total_nodes, device_query_graph.total_nodes};
   size_t data_signatures_bytes = signatures.getDataSignatureAllocationSize();
   std::cout << "Allocated " << getBytesSize(data_signatures_bytes) << " for data signatures" << std::endl;
@@ -126,7 +124,6 @@ int main(int argc, char** argv) {
                    false)
             << " out of " << getBytesSize(gpu_mem) << " available on " << gpu_name << std::endl;
 
-  // ===== 过滤阶段 =====
   std::cout << "------------- Runtime Filter Phase -------------" << std::endl;
    
   host_time_events.add("sig_gen_start");
@@ -207,7 +204,7 @@ int main(int argc, char** argv) {
    
   host_time_events.add("filter_proc_end");
 
-  // ===== Join 阶段：根据 partial_match_depth 分支 =====
+
   std::chrono::duration<double> join_time{0};
   std::chrono::duration<double> join_time2{0};
   size_t* total_full_matches = sycl::malloc_shared<size_t>(1, queue);
@@ -224,8 +221,7 @@ int main(int argc, char** argv) {
     host_time_events.add("join_start");
 
     int partial_match_depth = 0; 
-    
-    // [新增] 实现 use-cs 逻辑：如果启用，用第一个查询图的节点数设置深度
+
     if (args.use_cs) {
         if (first_query_nodes > 0) {
             partial_match_depth = static_cast<int>(first_query_nodes);
@@ -236,13 +232,13 @@ int main(int argc, char** argv) {
     }
 
     if (partial_match_depth == 0) {
-      // —— 直接使用 sigmo.cpp 的 joinCandidates ——
+
       auto join_e = sigmo::isomorphism::join::joinCandidates(
           queue, device_query_graph, device_data_graph, candidates, gmcr, total_full_matches, !args.find_all);
       join_e.wait();
       join_time2 = join_e.getProfilingInfo();
     } else {
-      // —— 原 sigmo2 的两步 Join：先做部分匹配，再扩展为完整匹配 ——
+ 
       std::cout << "------------- Partial Join Phase -------------" << std::endl;
       std::cout << "[*] Starting Partial Join for first query graph with depth: " << partial_match_depth << std::endl;
 
@@ -253,7 +249,7 @@ int main(int argc, char** argv) {
       size_t* num_partial_matches = sycl::malloc_shared<size_t>(1, queue);
       num_partial_matches[0] = 0;
 
-      // 1. 运行第一步：生成部分匹配 (Partial Candidates)
+
       auto start_cpu_step1 = std::chrono::high_resolution_clock::now();
       
       auto join_e2 = sigmo::isomorphism::join::joinPartialCandidates2(
@@ -280,7 +276,7 @@ int main(int argc, char** argv) {
 
       bool find_first = !args.find_all;
 
-      // 2. 运行第二步：基于部分匹配进行完整 Join (Join with Partial)
+
       auto start_cpu_step2 = std::chrono::high_resolution_clock::now();
 
       auto full_join_e = sigmo::isomorphism::join::joinWithPartialMatches(
@@ -308,7 +304,7 @@ int main(int argc, char** argv) {
   }
   std::cout << "[!] End" << std::endl;
 
-  // ===== GPU 统计 =====
+
   std::cout << "------------- Overall GPU Stats -------------" << std::endl;
   std::chrono::duration<double> total_sig_query_time
       = std::accumulate(query_sig_times.begin(), query_sig_times.end(), std::chrono::duration<double>(0));
@@ -351,7 +347,6 @@ int main(int argc, char** argv) {
   }
   std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count() << " ms" << std::endl;
 
-  // ===== Host 统计 =====
   std::cout << "------------- Overall Host Stats -------------" << std::endl;
   std::cout << "Setup Data time: "
             << std::chrono::duration_cast<std::chrono::milliseconds>(host_time_events.getRangeTime("setup_data_start", "setup_data_end")).count()
@@ -379,7 +374,7 @@ int main(int argc, char** argv) {
   std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(host_time_events.getTimeFrom("setup_data_end")).count()
             << " ms" << std::endl;
 
-  // ===== 结果 =====
+
   std::cout << "------------- Results -------------" << std::endl;
   if (!args.skip_print_candidates) {
     CandidatesInspector inspector;

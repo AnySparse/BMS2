@@ -8,7 +8,7 @@
 #include "device.hpp"
 #include "types.hpp"
 #include "utils.hpp"
-#include "graph.hpp" // <--- 新增
+#include "graph.hpp" 
 #include <cstdint>
 #include <sycl/sycl.hpp>
 
@@ -20,7 +20,7 @@ enum class SignatureScope { Data, Query };
 
 template<Algorithm A = Algorithm::PowerGraph, size_t Bits = 4>
 class Signature {
-// ... (此类无变化) ...
+
 public:
   struct SignatureDevice {
     uint64_t signature;
@@ -392,7 +392,7 @@ private:
   }
 };
 
-// ... (PathSignature class 无变化) ...
+
 SYCL_EXTERNAL inline uint32_t hash32(uint32_t h) {
   h ^= h >> 16;
   h *= 0x85ebca6b;
@@ -534,14 +534,14 @@ private:
   PathSignatureDevice* query_path_signatures;
 };
 
-// ========== 修改代码 [开始] ==========
+
 class CycleSignature {
 public:
   struct CycleSignatureDevice {
-    uint16_t count_5_rings_same; // 标签全部相同的5元环
-    uint16_t count_5_rings_diff; // 标签不全相同的5元环
-    uint16_t count_6_rings_same; // 标签全部相同的6元环
-    uint16_t count_6_rings_diff; // 标签不全相同的6元环
+    uint16_t count_5_rings_same; 
+    uint16_t count_5_rings_diff; 
+    uint16_t count_6_rings_same; 
+    uint16_t count_6_rings_diff;
 
     SYCL_EXTERNAL void clear() {
       count_5_rings_same = 0;
@@ -567,7 +567,7 @@ public:
     queue.fill(data_cycle_signatures, CycleSignatureDevice{0, 0, 0, 0}, data_nodes);
     queue.fill(query_cycle_signatures, CycleSignatureDevice{0, 0, 0, 0}, query_nodes).wait();
   }
-// ... (析构函数, generateQueryCycleSignatures, generateDataCycleSignatures 无变化) ...
+
   ~CycleSignature() {
     sycl::free(data_cycle_signatures, queue);
     sycl::free(query_cycle_signatures, queue);
@@ -720,7 +720,7 @@ public:
     event.add(e);
     return event;
   }
-// ... (getSize... functions 无变化) ...
+
   size_t getDataSignatureAllocationSize() const { return data_nodes * sizeof(CycleSignatureDevice); }
   size_t getQuerySignatureAllocationSize() const { return query_nodes * sizeof(CycleSignatureDevice); }
   CycleSignatureDevice* getDeviceDataSignatures() const { return data_cycle_signatures; }
@@ -733,7 +733,7 @@ private:
   CycleSignatureDevice* data_cycle_signatures;
   CycleSignatureDevice* query_cycle_signatures;
 };
-// ========== 修改代码 [结束] ==========
+
 
 } // namespace signature
 } // namespace sigmo

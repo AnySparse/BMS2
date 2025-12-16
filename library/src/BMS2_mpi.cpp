@@ -12,11 +12,11 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include <iomanip> // 包含 <iomanip> 用于 std::setw
-#include <fstream> // 包含 <fstream> 用于 std::ifstream
-#include <algorithm> // 用于 std::sort / std::min_element / std::count
+#include <iomanip> 
+#include <fstream> 
+#include <algorithm> 
 
-// 用于存储每个批次结果的结构体
+
 struct BatchLog {
     size_t batch_id;
     double gpu_filter_ms;
@@ -42,12 +42,11 @@ int main(int argc, char** argv) {
   // Initialize program arguments and device options.
   Args args{argc, argv, sigmo::device::deviceOptions};
 
-  // 定义数据批次大小
-  const size_t DATA_BATCH_SIZE = 5000000; // 你可以调整这个值
+  const size_t DATA_BATCH_SIZE = 5000000; 
 
   sigmo::DeviceBatchedCSRGraph device_query_graph;
   size_t num_query_graphs;
-  size_t num_data_graphs; // 主机上的本地图数量
+  size_t num_data_graphs; 
 
   // Query all GPU devices available on the node.
   auto devices = sycl::device::get_devices(sycl::info::device_type::gpu);
@@ -62,22 +61,17 @@ int main(int argc, char** argv) {
   size_t gpu_mem = queue.get_device().get_info<sycl::info::device::global_mem_size>();
   std::string gpu_name = queue.get_device().get_info<sycl::info::device::name>();
 
-  // 主机图向量
+
   std::vector<sigmo::CSRGraph> data_graphs;
-  
-  // 用于检查总图数的变量，替换原来的 total_data_graphs 计算方式
+
   size_t total_valid_graphs_global = 0; 
-  
-  // [新增] 用于存储第一个查询图的节点数 (用于 --use-cs)
+
   size_t first_query_nodes = 0;
 
   if (args.query_data) {
     // Load query graphs serially (all ranks get all queries)
     auto query_graphs = sigmo::io::loadCSRGraphsFromFile(args.query_file);
-    
-    // ========== 基于图复杂度的负载均衡读入 [开始] ==========
 
-    // 1. 定义辅助 Lambda
     auto isValidLine = [](const std::string &line) -> bool {
         return (std::count(line.begin(), line.end(), 'n') == 1 &&
                 std::count(line.begin(), line.end(), 'e') == 1 &&
@@ -112,7 +106,6 @@ int main(int argc, char** argv) {
     std::vector<std::string> data_lines; 
     std::vector<int> owners; 
 
-    // 2. Rank 0 负责：扫描文件 -> 计算每个图的复杂度 -> 做全局调度
     if (mpi_rank == 0) {
         std::ifstream file(args.data_file);
         if (!file.is_open()) {
@@ -142,7 +135,7 @@ int main(int argc, char** argv) {
 
         owners.resize(total_valid_graphs_global);
 
-        // ---------- LPT 负载均衡 ----------
+
         struct Task { size_t idx; double cost; };
         std::vector<Task> tasks;
         tasks.reserve(total_valid_graphs_global);
@@ -173,7 +166,7 @@ int main(int argc, char** argv) {
         std::cout << "  Total valid data graphs = " << total_valid_graphs_global << std::endl;
     }
 
-    // 3. 广播 total_graphs 和 owners 映射
+
     MPI_Bcast(&total_valid_graphs_global, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
 
     if (total_valid_graphs_global == 0) {
@@ -186,7 +179,7 @@ int main(int argc, char** argv) {
     }
     MPI_Bcast(owners.data(), static_cast<int>(total_valid_graphs_global), MPI_INT, 0, MPI_COMM_WORLD);
 
-    // 4. 各个 rank 再次顺序扫描文件
+
     data_lines.reserve(total_valid_graphs_global / mpi_size + 1);
     {
         std::ifstream file_reader(args.data_file);
@@ -209,7 +202,7 @@ int main(int argc, char** argv) {
     }
     
     data_graphs = sigmo::io::loadCSRGraphsFromLines(data_lines);
-    // ========== 基于图复杂度的负载均衡读入 [结束] ==========
+
 
 
     // Query Filtering
@@ -222,15 +215,10 @@ int main(int argc, char** argv) {
       }
     }
 
-    // [新增] 捕获第一个查询图的节点数 (仅 Rank 0 需要做，然后广播)
-    // 注意：loadCSRGraphsFromFile 是所有 Rank 都做的，所以其实所有 Rank 都有 query_graphs
-    // 但为了逻辑一致性，我们可以在这里直接取，或者让 Rank 0 广播。
-    // 由于所有 Rank 都加载了相同的 query_graphs，直接本地取即可。
+
     if (!query_graphs.empty()) {
         first_query_nodes = query_graphs[0].getNumNodes();
     }
-    // 理论上不需要广播 first_query_nodes，因为大家拿到的 query_graphs 是一样的。
-    // 但如果 query 也是分布式加载的（目前看代码不是），则需要广播。
 
     num_query_graphs = query_graphs.size();
     for (size_t i = 1; i < args.multiply_factor_query; ++i) {
@@ -249,7 +237,7 @@ int main(int argc, char** argv) {
   }
 
   num_query_graphs = device_query_graph.num_graphs;
-  num_data_graphs = data_graphs.size(); // 这是此 rank 上的主机图数量
+  num_data_graphs = data_graphs.size();
   size_t query_nodes = device_query_graph.total_nodes;
 
   size_t query_graphs_bytes = sigmo::getDeviceGraphAllocSize(device_query_graph);
@@ -314,30 +302,27 @@ int main(int argc, char** argv) {
     size_t matches_in_this_batch = 0;
     size_t matches_before_batch = total_full_matches[0]; 
 
-    // 1. 获取当前批次的主机图
+
     size_t start_idx = batch_idx * DATA_BATCH_SIZE;
     size_t end_idx = std::min((batch_idx + 1) * DATA_BATCH_SIZE, data_graphs.size());
     std::vector<sigmo::CSRGraph> current_data_batch(data_graphs.begin() + start_idx, data_graphs.begin() + end_idx);
 
     if (current_data_batch.empty()) continue;
 
-    // 2. 为当前批次创建 Device Graph
     sigmo::DeviceBatchedCSRGraph device_data_graph = sigmo::createDeviceCSRGraph(queue, current_data_batch);
     size_t data_nodes_batch = device_data_graph.total_nodes;
     
-    // 3. 分配批次局部的 Candidates 和 所有 Signatures
+
     sigmo::candidates::Candidates candidates{queue, query_nodes, data_nodes_batch};
     sigmo::signature::Signature<> signatures{queue, data_nodes_batch, query_nodes};
     sigmo::signature::PathSignature path_signatures{queue, data_nodes_batch, query_nodes};
     sigmo::signature::CycleSignature cycle_signatures{queue, data_nodes_batch, query_nodes};
 
-    // 批次主机过滤阶段计时开始
     auto host_batch_filter_start = std::chrono::steady_clock::now();
 
     // 4. Runtime Filter Phase (for this batch)
     std::chrono::duration<double> time;
 
-    // === 生成所有 Data 签名 ===
     auto e1 = signatures.generateDataSignatures(device_data_graph);
     auto e_path_1 = path_signatures.generateDataPathSignatures(device_data_graph);
     auto e_cycle_1 = cycle_signatures.generateDataCycleSignatures(device_data_graph);
@@ -347,9 +332,7 @@ int main(int argc, char** argv) {
     batch_gpu_filter_time += e_path_1.getProfilingInfo();
     e_cycle_1.wait();
     batch_gpu_filter_time += e_cycle_1.getProfilingInfo();
-
-    // === 生成所有 Query 签名 ===
-    auto e2 = signatures.generateQuerySignatures(device_query_graph);
+  auto e2 = signatures.generateQuerySignatures(device_query_graph);
     auto e_path_2 = path_signatures.generateQueryPathSignatures(device_query_graph);
     auto e_cycle_2 = cycle_signatures.generateQueryCycleSignatures(device_query_graph);
     e2.wait();
@@ -359,13 +342,12 @@ int main(int argc, char** argv) {
     e_cycle_2.wait();
     batch_gpu_filter_time += e_cycle_2.getProfilingInfo();
 
-    // === 融合过滤 ===
+
     auto e3 = sigmo::isomorphism::filter::filterCandidates(
         queue, device_query_graph, device_data_graph, signatures, path_signatures, cycle_signatures, candidates);
     e3.wait();
     batch_gpu_filter_time += e3.getProfilingInfo();
 
-    // === 提纯循环 ===
     for (size_t ref_step = 1; ref_step <= args.refinement_steps; ++ref_step) {
       auto e1_ref = signatures.refineDataSignatures(device_data_graph, ref_step);
       e1_ref.wait();
@@ -380,7 +362,7 @@ int main(int argc, char** argv) {
       batch_gpu_filter_time += e3_ref.getProfilingInfo();
     }
     
-    // 批次主机过滤阶段计时结束
+
     auto host_batch_filter_end = std::chrono::steady_clock::now();
 
     // 5. Join Phase
@@ -395,11 +377,10 @@ int main(int argc, char** argv) {
 
       int partial_match_depth = 0; 
 
-      // [新增] 实现 use-cs 逻辑：如果启用，用第一个查询图的节点数设置深度
       if (args.use_cs) {
           if (first_query_nodes > 0) {
               partial_match_depth = static_cast<int>(first_query_nodes);
-              // 仅在第一个 Batch 的 Rank 0 打印一次日志，避免刷屏
+
               if (batch_idx == 0 && mpi_rank == 0) {
                   std::cout << "[Config] --use-cs enabled. partial_match_depth set to " << partial_match_depth << std::endl;
               }
@@ -414,13 +395,13 @@ int main(int argc, char** argv) {
       std::chrono::duration<double> join_time_part2{0};
 
       if (partial_match_depth == 0) {
-        // —— 直接使用 sigmo.cpp 的 joinCandidates ——
+
         auto join_e = sigmo::isomorphism::join::joinCandidates(
             queue, device_query_graph, device_data_graph, candidates, gmcr, total_full_matches, !args.find_all);
         join_e.wait();
         join_time_part1 = join_e.getProfilingInfo();
       } else {
-        // —— 两步 Join：先做部分匹配，再扩展为完整匹配 ——
+
         const size_t MAX_PARTIAL_MATCHES = 100000000;
         const size_t partial_match_size = partial_match_depth + 1; 
 
