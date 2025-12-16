@@ -1,1 +1,0 @@
-from .output_analyzer import SIGMOOutputAnalyzer
