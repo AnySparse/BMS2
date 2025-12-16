@@ -1,5 +1,4 @@
-# Copyright (c) 2025 University of Salerno
-# SPDX-License-Identifier: Apache-2.0
+
 
 import argparse
 import sys
@@ -107,4 +106,5 @@ if __name__ == '__main__':
     print(f"Writing to: {args.output}")
     write_bms2_format(graphs, args.output)
     
+
     print("Done.")
