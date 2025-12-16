@@ -34,7 +34,6 @@ public:
   Args::Filter query_filter;
   bool skip_print_candidates = false;
   
-  // [修改 1] 新增成员变量
   bool use_cs = false;
 
   Args(int& argc, char**& argv, sigmo::device::DeviceOptions& device_options) {
