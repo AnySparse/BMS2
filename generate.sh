@@ -1,5 +1,5 @@
 #!/bin/bash
-BASE_DIR="/home/hujiayue/BMS2"
+BASE_DIR="BMS2"
 DATASET_DIR="$BASE_DIR/dataset"
 QUERYSET_DIR="$BASE_DIR/queryset"
 OUTPUT_BASE="$BASE_DIR/data"
