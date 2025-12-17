@@ -1,10 +1,7 @@
 #!/bin/bash
-# Copyright (c) 2025 University of Salerno
-# SPDX-License-Identifier: Apache-2.0
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-# 默认配置
 sigmo_arch="nvidia_gpu_sm_70"
 sigmo_compiler=""
 
@@ -16,7 +13,6 @@ help()
       [ -h | --help ]       Print this help message and exit."
 }
 
-# 解析参数
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --sigmo-arch=*)
@@ -39,7 +35,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# 自动检测 Intel icpx 编译器
+
 if [ -z "$sigmo_compiler" ]; then
   if command -v icpx &> /dev/null; then
     sigmo_compiler=$(which icpx)
@@ -55,11 +51,9 @@ echo "[*] Starting BMS2 build process..."
 echo "[*] Architecture: $sigmo_arch"
 echo "[*] Compiler: $sigmo_compiler"
 
-# 创建并进入构建目录
 mkdir -p "$SCRIPT_DIR/build"
 cd "$SCRIPT_DIR/build" || exit 1
 
-# 执行 CMake 配置和构建
 cmake ../library \
   -DCMAKE_CXX_COMPILER="$sigmo_compiler" \
   -DSIGMO_TARGET_ARCHITECTURE="$sigmo_arch" \
