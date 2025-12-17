@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-BASE_DIR="/home/hujiayue/BMS2"
+BASE_DIR="BMS2"
 
 
 EXEC_CMD="$BASE_DIR/build/BMS2"
@@ -74,8 +74,8 @@ for data_path in "$DATA_DIR"/*.dat; do
 
         for query_path in "$cs_subdir"/*.dat; do
             [ -e "$query_path" ] || continue
-            query_filename=$(basename "$query_path")       # 带后缀 (cluster_other.dat)
-            query_name_noext=$(basename "$query_path" .dat) # 不带后缀 (cluster_other)
+            query_filename=$(basename "$query_path")       
+            query_name_noext=$(basename "$query_path" .dat) 
 
             
             log_out="$PHASE2_LOG_DIR/${query_name_noext}.log"
